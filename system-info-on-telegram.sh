@@ -4,7 +4,7 @@
 # him and you can manage every aspect of your bots,
 # such as his token.
 # Remember do not reveal it to anyone!
-BOT_TOKEN="<your_bot_key>"
+BOT_TOKEN="<your_bot_token>"
 
 # The CHAT_ID can be obtained by visiting a url containing
 # the token of your bot.
@@ -39,7 +39,7 @@ else
 fi
 
 # Top 10 processes
-PROCESSES="${TAGO}%0APROCESSES:%0A$(ps -Ao user,comm,pcpu,pmem --sort=-pcpu | head -n 9)${TAGC}%0A"
+PROCESSES="${TAGO}%0APROCESSES:%0A$(ps -Ao user,comm,pcpu,pmem --sort=-pcpu | head -n 6)${TAGC}%0A"
 
 # Memory usage
 MEMORY="${TAGO}%0A$(free -h | sed -e 's/\(^\|Mem:\|Swap:\)\s\s\s\(\s\+[0-9a-zA-Z\.]\+\)\s\s\s\(\s\+[0-9a-zA-Z\.]\+\)\s\s\s\(\s\+[0-9a-zA-Z\.]\+\)\(.\+\)\?\(\n\|$\)/\1\2\3\4/g' | sed -e 's/^\s\s\s\s\s\s\s/MEMORY:/')${TAGC}%0A"
@@ -57,10 +57,22 @@ IN=$(calc \(\(\(\(${RX2}-${RX}\)/10\)/1048576\)*8\))
 OUT=$(calc \(\(\(\(${TX2}-${TX}\)/10\)/1048576\)*8\))
 ALLIN=$(calc ${RX2} / 1073741824)
 ALLOUT=$(calc ${TX2} / 1073741824)
-NETWORK="${TAGO}%0ANETWORK eth0 (avg 10s - all):%0A IN:  ${IN} Mb/s  -  ${ALLIN} GB%0AOUT:  ${OUT} Mb/s  -  ${ALLOUT} GB${TAGC}"
+NETWORK="${TAGO}%0ANETWORK eth0 (avg 10s - all):%0A in:  ${IN} Mb/s  -  ${ALLIN} GB%0Aout:  ${OUT} Mb/s  -  ${ALLOUT} GB${TAGC}%0A"
+
+# Tendermint validator info.
+# By default it is disabled, yes to enable.
+ENABLE_VALIDATOR_INFO="no"
+if [ ${ENABLE_VALIDATOR_INFO} = "yes" ]; then
+  MONIKER=$(curl localhost:26657/status? 2>&1 | awk '{gsub(/^( )+/,"")}/moniker/{print $0}' | sed -e 's/[",]//g' | sed -e 's/moniker:\s//')
+  VALIDATOR_NETWORK=$(curl localhost:26657/status? 2>&1 | awk '{gsub(/^( )+/,"")}/network/{print $0}' | sed -e 's/[",]//g' | sed -e 's/network:\s//')
+  VOTING_POWER=$(curl localhost:26657/status? 2>&1 | awk '{gsub(/^( )+/,"")}/voting_power/{print $0}' | sed -e 's/[",]//g' | sed -e 's/voting_power:\s//')
+  VALIDATOR_INFO="${TAGO}%0AVALIDATOR:%0Amoniker: ${MONIKER}%0Anetwork: ${VALIDATOR_NETWORK}%0Avoting power: ${VOTING_POWER}${TAGC}"
+else
+  VALIDATOR_INFO=""
+fi
 
 # Build final message
-MESSAGE=${DATE}${GEN_INFO}${UPTIME}${LOGIN}${PROCESSES}${MEMORY}${DISK}${NETWORK}
+MESSAGE=${DATE}${GEN_INFO}${UPTIME}${LOGIN}${PROCESSES}${MEMORY}${DISK}${NETWORK}${VALIDATOR_INFO}
 
 # Telegram api url
 URL="https://api.telegram.org/bot${BOT_TOKEN}/sendMessage"
