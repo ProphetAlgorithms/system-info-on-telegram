@@ -33,7 +33,7 @@ GEN_INFO=${TAGO}$(uname -srp)"%0A"${TAGC}
 
 # Logged users
 if [ "$(w -h)" = "" ]; then
-   LOGIN="${TAGO}%0ALOGIN:%0ANone${TAGC}%0A"
+   LOGIN=""
 else
    LOGIN="${TAGO}%0ALOGIN:%0A$(echo "$(w -h)" | sed -E 's/^/- /g')${TAGC}%0A"
 fi
@@ -61,12 +61,31 @@ NETWORK="${TAGO}%0ANETWORK eth0 (avg 10s - all):%0A in:  ${IN} Mb/s  -  ${ALLIN}
 
 # Tendermint validator info.
 # By default it is disabled, yes to enable.
+# Warning: do not use the same user to start the script and the validator!
+# I use two different users to run the script and the validator in addition
+# have a (compiled) copy of the executables in the home folder of the user
+# who starts the script to not grant shared permissions.
 ENABLE_VALIDATOR_INFO="no"
 if [ ${ENABLE_VALIDATOR_INFO} = "yes" ]; then
+  # Adjust the name according to your needs, this is the name
+  # used to find the executables and the repository folder.
+  NODE_NAME="<base_name>"
+  CLI_BIN="${NODE_NAME}cli"
+  USER_BASE_PATH=$(printenv HOME)
+  # Adjust the repository name to your needs, it may not reflect the form <node_name> + "d"
+  REPO_NAME="${NODE_NAME}d"
+  BIN_PATH="${USER_BASE_PATH}/${REPO_NAME}/build/"
+  SIGNING_INFO_CMD=" query slashing signing-info "
+  CHAINID_FLAG=" --chain-id "
+  VALCONSPUB_ADDR="<valconspub_address>"
   MONIKER=$(curl localhost:26657/status? 2>&1 | awk '{gsub(/^( )+/,"")}/moniker/{print $0}' | sed -e 's/[",]//g' | sed -e 's/moniker:\s//')
   VALIDATOR_NETWORK=$(curl localhost:26657/status? 2>&1 | awk '{gsub(/^( )+/,"")}/network/{print $0}' | sed -e 's/[",]//g' | sed -e 's/network:\s//')
   VOTING_POWER=$(curl localhost:26657/status? 2>&1 | awk '{gsub(/^( )+/,"")}/voting_power/{print $0}' | sed -e 's/[",]//g' | sed -e 's/voting_power:\s//')
-  VALIDATOR_INFO="${TAGO}%0AVALIDATOR:%0Amoniker: ${MONIKER}%0Anetwork: ${VALIDATOR_NETWORK}%0Avoting power: ${VOTING_POWER}${TAGC}"
+  # Remove this folder every cli call because it increases the content by 8kb per call,
+  # frequent use could take up considerable space in the long run.
+  rm -rf ${USER_BASE_PATH}"/."${CLI_BIN}"/"
+  SIGNING_INFO=$(${BIN_PATH}${CLI_BIN}${SIGNING_INFO_CMD}${VALCONSPUB_ADDR}${CHAINID_FLAG}${VALIDATOR_NETWORK} 2>/dev/null | awk '/jailed_until/;/tombstoned/;/missed_blocks_counter/' | sed -e 's/_/ /g')
+  VALIDATOR_INFO="${TAGO}%0AVALIDATOR:%0Amoniker: ${MONIKER}%0Anetwork: ${VALIDATOR_NETWORK}%0Avoting power: ${VOTING_POWER}%0A${SIGNING_INFO}${TAGC}"
 else
   VALIDATOR_INFO=""
 fi
