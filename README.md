@@ -17,6 +17,4 @@ crontab -u <user> -e
 ```
 You can add your own rule, that in example starts the script every half hour.
 
-I use two different users to run the script and the validator in addition have a (compiled) copy of the 
-executables in the home folder of the user who starts the script to not grant shared permissions.
-In the script there are sections enclosed by <> that need to be replaced with your data, before starting.
+In the script there are sections enclosed by <> that need to be replaced with your data before starting.
