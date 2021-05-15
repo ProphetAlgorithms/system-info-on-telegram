@@ -68,7 +68,7 @@ if [ ${ENABLE_VALIDATOR_INFO} = "yes" ]; then
   # used to find the executables and the repository folder.
   NODE_NAME="<base_name>"
   CLI_BIN="${NODE_NAME}cli"
-  #USER_BASE_PATH=$(printenv HOME)
+  USER_BASE_PATH=$(printenv HOME)
   # Adjust the repository name to your needs, it may not reflect the form <node_name> + "d"
   #REPO_NAME="${NODE_NAME}d"
   #BIN_PATH="${USER_BASE_PATH}/${REPO_NAME}/build/"
