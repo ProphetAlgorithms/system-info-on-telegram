@@ -75,14 +75,14 @@ if [ ${ENABLE_VALIDATOR_INFO} = "yes" ]; then
   SIGNING_INFO_CMD=" query slashing signing-info "
   CHAINID_FLAG=" --chain-id "
   VALCONSPUB_ADDR="<valconspub_address>"
-  MONIKER=$(curl localhost:26657/status? 2>&1 | awk '{gsub(/^( )+/,"")}/moniker/{print $0}' | sed -e 's/[",]//g' | sed -e 's/moniker:\s//')
-  VALIDATOR_NETWORK=$(curl localhost:26657/status? 2>&1 | awk '{gsub(/^( )+/,"")}/network/{print $0}' | sed -e 's/[",]//g' | sed -e 's/network:\s//')
-  VOTING_POWER=$(curl localhost:26657/status? 2>&1 | awk '{gsub(/^( )+/,"")}/voting_power/{print $0}' | sed -e 's/[",]//g' | sed -e 's/voting_power:\s//')
+  NODE_STATUS=$(curl localhost:26657/status? 2>&1)
+  VALIDATOR_STATUS=$(echo "${NODE_STATUS}" | awk '/voting_power/{gsub(/_/," ",$1);pow=$0}/moniker/{gsub(/_/," ",$1);mon=$0}END{print mon"\n"pow}' | sed -e 's/^\s\+\?"\(.\+\)":\s"\(.\+\)",\?/\1: \2/')
+  VALIDATOR_NETWORK=$(echo "${NODE_STATUS}" | awk '/network/' | sed -e 's/^.\+:\s"\(.\+\)",\?/\1/')
   # Remove this folder every cli call because it increases the content by 8kb per call,
   # frequent use could take up considerable space in the long run.
   rm -rf ${USER_BASE_PATH}"/."${CLI_BIN}"/"
   SIGNING_INFO=$(${CLI_BIN}${SIGNING_INFO_CMD}${VALCONSPUB_ADDR}${CHAINID_FLAG}${VALIDATOR_NETWORK} 2>/dev/null | awk '/jailed_until/;/tombstoned/;/missed_blocks_counter/' | sed -e 's/_/ /g')
-  VALIDATOR_INFO="${TAGO}%0AVALIDATOR:%0Amoniker: ${MONIKER}%0Anetwork: ${VALIDATOR_NETWORK}%0Avoting power: ${VOTING_POWER}%0A${SIGNING_INFO}${TAGC}"
+  VALIDATOR_INFO="${TAGO}%0AVALIDATOR:%0A${VALIDATOR_STATUS}%0Anetwork: ${VALIDATOR_NETWORK}%0A${SIGNING_INFO}${TAGC}"
 else
   VALIDATOR_INFO=""
 fi
