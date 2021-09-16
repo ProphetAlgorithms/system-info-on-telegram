@@ -66,8 +66,8 @@ ENABLE_VALIDATOR_INFO="no"
 if [ ${ENABLE_VALIDATOR_INFO} = "yes" ]; then
   # Adjust the name according to your needs, this is the name
   # used to find the executables and the repository folder.
-  NODE_NAME="<base_name>"
-  CLI_BIN="${NODE_NAME}cli"
+  NODE_NAME="fetch"
+  CLI_BIN="${NODE_NAME}d"
   USER_BASE_PATH=$(printenv HOME)
   # Adjust the repository name to your needs, it may not reflect the form <node_name> + "d"
   #REPO_NAME="${NODE_NAME}d"
@@ -80,8 +80,9 @@ if [ ${ENABLE_VALIDATOR_INFO} = "yes" ]; then
   VALIDATOR_NETWORK=$(echo "${NODE_STATUS}" | awk '/network/' | sed -e 's/^.\+:\s"\(.\+\)",\?/\1/')
   # Remove this folder every cli call because it increases the content by 8kb per call,
   # frequent use could take up considerable space in the long run.
-  rm -rf ${USER_BASE_PATH}"/."${CLI_BIN}"/"
-  SIGNING_INFO=$(${CLI_BIN}${SIGNING_INFO_CMD}${VALCONSPUB_ADDR}${CHAINID_FLAG}${VALIDATOR_NETWORK} 2>/dev/null | awk '/jailed_until/;/tombstoned/;/missed_blocks_counter/' | sed -e 's/_/ /g')
+  # *** Not needed with the stargate version upgrade because fetchcli was included in the fetchd executable. ***
+# rm -rf ${USER_BASE_PATH}"/."${CLI_BIN}"/"
+  SIGNING_INFO=$(${CLI_BIN}${SIGNING_INFO_CMD}${VALCONSPUB_ADDR}${CHAINID_FLAG}${VALIDATOR_NETWORK} 2>/dev/null | awk '/jailed_until/{gsub(/_/," ",$1);jail=$0}/missed_blocks_counter/{gsub(/_/," ",$1);miss=$0}/tombstoned/{gsub(/_/," ",$1);tomb=$0}END{print jail"\n"tomb"\n"miss}' | sed -e 's/^\s\+\?"\?\(.\+\)"\?:\s"\(.\+\)",\?/\1: \2/')
   VALIDATOR_INFO="${TAGO}%0AVALIDATOR:%0A${VALIDATOR_STATUS}%0Anetwork: ${VALIDATOR_NETWORK}%0A${SIGNING_INFO}${TAGC}"
 else
   VALIDATOR_INFO=""
