@@ -26,7 +26,7 @@ TAGC="</pre>"
 
 # Date and uptime
 DATE=${TAGO}$(date +"%d/%m/%Y - %H:%M:%S")"%0A"${TAGC}
-UPTIME=${TAGO}$(echo $(uptime) | sed -e 's/.\+up\(\s[0-9]\+\sday[s]\?\).\+\(load.\+$\)/uptime:\1%0A\2/')"%0A"${TAGC}
+UPTIME=${TAGO}$(echo $(uptime) | sed -e 's/.\+up\(\s[0-9:]\+\(\sdays\?\)\?\).\+\(load.\+$\)/uptime:\1%0A\3/')"%0A"${TAGC}
 
 # Generic info
 GEN_INFO=${TAGO}$(uname -srp)"%0A"${TAGC}
