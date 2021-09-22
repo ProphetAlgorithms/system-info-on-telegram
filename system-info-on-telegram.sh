@@ -48,16 +48,17 @@ MEMORY="${TAGO}%0A$(free -h | sed -e 's/\(^\|Mem:\|Swap:\)\s\s\s\(\s\+[0-9a-zA-Z
 DISK="${TAGO}%0ADISK:%0A$(df -h --output=target,used,avail,size /)${TAGC}%0A"
 
 # Network usage, average 10 seconds and total data
-RX=$(cat /sys/class/net/eth0/statistics/rx_bytes)
-TX=$(cat /sys/class/net/eth0/statistics/tx_bytes)
+IF="eth0"
+RX=$(cat /sys/class/net/${IF}/statistics/rx_bytes)
+TX=$(cat /sys/class/net/${IF}/statistics/tx_bytes)
 sleep 10
-RX2=$(cat /sys/class/net/eth0/statistics/rx_bytes)
-TX2=$(cat /sys/class/net/eth0/statistics/tx_bytes)
+RX2=$(cat /sys/class/net/${IF}/statistics/rx_bytes)
+TX2=$(cat /sys/class/net/${IF}/statistics/tx_bytes)
 IN=$(calc \(\(\(\(${RX2}-${RX}\)/10\)/1048576\)*8\))
 OUT=$(calc \(\(\(\(${TX2}-${TX}\)/10\)/1048576\)*8\))
 ALLIN=$(calc ${RX2} / 1073741824)
 ALLOUT=$(calc ${TX2} / 1073741824)
-NETWORK="${TAGO}%0ANETWORK eth0 (avg 10s - all):%0A in:  ${IN} Mb/s  -  ${ALLIN} GB%0Aout:  ${OUT} Mb/s  -  ${ALLOUT} GB${TAGC}%0A"
+NETWORK="${TAGO}%0ANETWORK ${IF} (avg 10s - all):%0A in:  ${IN} Mb/s  -  ${ALLIN} GB%0Aout:  ${OUT} Mb/s  -  ${ALLOUT} GB${TAGC}%0A"
 
 # Tendermint validator info.
 # By default it is disabled, yes to enable.
