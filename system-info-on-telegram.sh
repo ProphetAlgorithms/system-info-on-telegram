@@ -33,9 +33,9 @@ GEN_INFO=${TAGO}$(uname -srp)"%0A"${TAGC}
 
 # Logged users
 if [ "$(w -h)" = "" ]; then
-   LOGIN=""
+  LOGIN=""
 else
-   LOGIN="${TAGO}%0ALOGIN:%0A$(echo "$(w -h)" | sed -E 's/^/- /g')${TAGC}%0A"
+  LOGIN="${TAGO}%0ALOGIN:%0A$(echo "$(w -h)" | sed -E 's/^/- /g')${TAGC}%0A"
 fi
 
 # Top 10 processes
@@ -65,7 +65,7 @@ NETWORK="${TAGO}%0ANETWORK ${IF} (avg 10s - all):%0A in:  ${IN} Mb/s  -  ${ALLIN
 # Warning: do not use the same user to start the script and the validator!
 ENABLE_VALIDATOR_INFO="no"
 if [ ${ENABLE_VALIDATOR_INFO} = "yes" ]; then
-# Adjust the name according to your needs, this is the name
+  # Adjust the name according to your needs, this is the name
   # used to find the executables and the repository folder.
   NODE_NAME="<daemon name without d>"
   CLI_BIN="${NODE_NAME}d"
@@ -89,7 +89,7 @@ if [ ${ENABLE_VALIDATOR_INFO} = "yes" ]; then
   # Remove this folder every cli call because it increases the content by 8kb per call,
   # frequent use could take up considerable space in the long run.
   # *** Not needed with the stargate version upgrade because fetchcli was included in the fetchd executable. ***
-# rm -rf ${USER_BASE_PATH}"/."${CLI_BIN}"/"
+  # rm -rf ${USER_BASE_PATH}"/."${CLI_BIN}"/"
   VALIDATOR_INFO="${TAGO}%0AVALIDATOR:%0A${STAKING_VALIDATOR_INFO}%0A${TOKENS_INFO}%0Anetwork: ${VALIDATOR_NETWORK}%0A${SLASHING_SIGNING_INFO}${TAGC}"
 else
   VALIDATOR_INFO=""
