@@ -65,26 +65,32 @@ NETWORK="${TAGO}%0ANETWORK ${IF} (avg 10s - all):%0A in:  ${IN} Mb/s  -  ${ALLIN
 # Warning: do not use the same user to start the script and the validator!
 ENABLE_VALIDATOR_INFO="no"
 if [ ${ENABLE_VALIDATOR_INFO} = "yes" ]; then
-  # Adjust the name according to your needs, this is the name
+# Adjust the name according to your needs, this is the name
   # used to find the executables and the repository folder.
-  NODE_NAME="fetch"
+  NODE_NAME="<daemon name without d>"
   CLI_BIN="${NODE_NAME}d"
   USER_BASE_PATH=$(printenv HOME)
-  # Adjust the repository name to your needs, it may not reflect the form <node_name> + "d"
-  #REPO_NAME="${NODE_NAME}d"
-  #BIN_PATH="${USER_BASE_PATH}/${REPO_NAME}/build/"
-  SIGNING_INFO_CMD=" query slashing signing-info "
-  CHAINID_FLAG=" --chain-id "
-  VALCONSPUB_ADDR="<valconspub_address>"
-  NODE_STATUS=$(curl localhost:26657/status? 2>&1)
-  VALIDATOR_STATUS=$(echo "${NODE_STATUS}" | awk '/voting_power/{gsub(/_/," ",$1);pow=$0}/moniker/{gsub(/_/," ",$1);mon=$0}END{print mon"\n"pow}' | sed -e 's/^\s\+\?"\(.\+\)":\s"\(.\+\)",\?/\1: \2/')
+  UNIT=1000000000000000000
+  STAKING_VALIDATOR_CMD=" query staking validator "
+  SLASHING_SIGNING_CMD=" query slashing signing-info "
+  TENDERMINT_RPC_NODE="<rpc node address>"
+  VALOPER_ADDR="<valoper address>"
+  CONSENSUS_PUBKEY=$(${CLI_BIN}${STAKING_VALIDATOR_CMD}${VALOPER_ADDR} 2>/dev/null | awk '/(^|\s)key/' | sed -e 's/^\s\+\?"\?\(.\+\)"\?:\s"\?\(.\+\)"\?,\?/\2/')
+  CONSENSUS_PUBKEY_PARAM="{\"@type\":\"/cosmos.crypto.ed25519.PubKey\",\"key\":\"${CONSENSUS_PUBKEY}\"}"
+  SLASHING_SIGNING_INFO=$(${CLI_BIN}${SLASHING_SIGNING_CMD}${CONSENSUS_PUBKEY_PARAM} 2>/dev/null | awk '/jailed_until/{gsub(/_/," ",$1);jail=$0}/tombstoned/{gsub(/_/," ",$1);tomb=$0}/missed_blocks_counter/{gsub(/_/," ",$1);miss=$0}END{print jail"\n"tomb"\n"miss}' | sed -e 's/^\s\+\?"\?\(.\+\)"\?:\s"\(.\+\)",\?/\1: \2/' | sed -e 's/^\s\+\?//')
+  STAKING_VALIDATOR_INFO=$(${CLI_BIN}${STAKING_VALIDATOR_CMD}${VALOPER_ADDR} 2>/dev/null | awk '/moniker/{gsub(/_/," ",$1);mon=$0}/operator_address/{gsub(/_/," ",$1);op_addr=$0}END{print mon"\n"op_addr}' | sed -e 's/^\s\+\?"\?\(.\+\)"\?:\s"\(.\+\)",\?/\1: \2/' | sed -e 's/^\s\+\?//')
+  TOKENS=$(${CLI_BIN}${STAKING_VALIDATOR_CMD}${VALOPER_ADDR} 2>/dev/null | awk '/tokens/{gsub(/_/," ",$1);tokens=$2}END{print tokens}' | sed -e 's/^\s\+\?"\(.\+\)",\?/\1/')
+  if [ $(echo "${TOKENS} < ${UNIT}" | bc) -gt "0" ]; then
+    TOKENS="0"
+  fi
+  TOKENS_INFO="tokens: $(echo ${TOKENS} | sed -e 's/\(.*[0-9]\)\([0-9]\{18\}\)/\1/')"
+  NODE_STATUS=$(curl ${TENDERMINT_RPC_NODE}/status? 2>&1)
   VALIDATOR_NETWORK=$(echo "${NODE_STATUS}" | awk '/network/' | sed -e 's/^.\+:\s"\(.\+\)",\?/\1/')
   # Remove this folder every cli call because it increases the content by 8kb per call,
   # frequent use could take up considerable space in the long run.
   # *** Not needed with the stargate version upgrade because fetchcli was included in the fetchd executable. ***
 # rm -rf ${USER_BASE_PATH}"/."${CLI_BIN}"/"
-  SIGNING_INFO=$(${CLI_BIN}${SIGNING_INFO_CMD}${VALCONSPUB_ADDR}${CHAINID_FLAG}${VALIDATOR_NETWORK} 2>/dev/null | awk '/jailed_until/{gsub(/_/," ",$1);jail=$0}/missed_blocks_counter/{gsub(/_/," ",$1);miss=$0}/tombstoned/{gsub(/_/," ",$1);tomb=$0}END{print jail"\n"tomb"\n"miss}' | sed -e 's/^\s\+\?"\?\(.\+\)"\?:\s"\(.\+\)",\?/\1: \2/')
-  VALIDATOR_INFO="${TAGO}%0AVALIDATOR:%0A${VALIDATOR_STATUS}%0Anetwork: ${VALIDATOR_NETWORK}%0A${SIGNING_INFO}${TAGC}"
+  VALIDATOR_INFO="${TAGO}%0AVALIDATOR:%0A${STAKING_VALIDATOR_INFO}%0A${TOKENS_INFO}%0Anetwork: ${VALIDATOR_NETWORK}%0A${SLASHING_SIGNING_INFO}${TAGC}"
 else
   VALIDATOR_INFO=""
 fi
