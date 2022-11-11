@@ -73,6 +73,7 @@ if [ ${ENABLE_VALIDATOR_INFO} = "yes" ]; then
   UNIT=1000000000000000000
   STAKING_VALIDATOR_CMD=" query staking validator "
   SLASHING_SIGNING_CMD=" query slashing signing-info "
+  VERSION_CMD=" version"
   TENDERMINT_RPC_NODE="<rpc node address>"
   VALOPER_ADDR="<valoper address>"
   CONSENSUS_PUBKEY=$(${CLI_BIN}${STAKING_VALIDATOR_CMD}${VALOPER_ADDR} 2>/dev/null | awk '/(^|\s)key/' | sed -e 's/^\s\+\?"\?\(.\+\)"\?:\s"\?\(.\+\)"\?,\?/\2/')
@@ -86,11 +87,12 @@ if [ ${ENABLE_VALIDATOR_INFO} = "yes" ]; then
   TOKENS_INFO="tokens: $(echo ${TOKENS} | sed -e 's/\(.*[0-9]\)\([0-9]\{18\}\)/\1/')"
   NODE_STATUS=$(curl ${TENDERMINT_RPC_NODE}/status? 2>&1)
   VALIDATOR_NETWORK=$(echo "${NODE_STATUS}" | awk '/network/' | sed -e 's/^.\+:\s"\(.\+\)",\?/\1/')
+  NODE_VERSION=$(echo "node version: ${CLI_BIN} $(${CLI_BIN}${VERSION_CMD})" | sed -r 's/\+/%2B/g')
   # Remove this folder every cli call because it increases the content by 8kb per call,
   # frequent use could take up considerable space in the long run.
   # *** Not needed with the stargate version upgrade because fetchcli was included in the fetchd executable. ***
   # rm -rf ${USER_BASE_PATH}"/."${CLI_BIN}"/"
-  VALIDATOR_INFO="${TAGO}%0AVALIDATOR:%0A${STAKING_VALIDATOR_INFO}%0A${TOKENS_INFO}%0Anetwork: ${VALIDATOR_NETWORK}%0A${SLASHING_SIGNING_INFO}${TAGC}"
+  VALIDATOR_INFO="${TAGO}%0AVALIDATOR:%0A${NODE_VERSION}%0A${STAKING_VALIDATOR_INFO}%0A${TOKENS_INFO}%0Anetwork: ${VALIDATOR_NETWORK}%0A${SLASHING_SIGNING_INFO}${TAGC}"
 else
   VALIDATOR_INFO=""
 fi
