@@ -38,7 +38,7 @@ else
   LOGIN="${TAGO}%0ALOGIN:%0A$(echo "$(w -h)" | sed -E 's/^/- /g')${TAGC}%0A"
 fi
 
-# Top 10 processes
+# Top 5 processes
 PROCESSES="${TAGO}%0APROCESSES:%0A$(ps -Ao user,comm,pcpu,pmem --sort=-pcpu | head -n 6)${TAGC}%0A"
 
 # Memory usage
