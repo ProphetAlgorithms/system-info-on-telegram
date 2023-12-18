@@ -21,8 +21,8 @@ calc() { awk "BEGIN{ printf \"%.2f\n\", $* }"; }
 # Rememeber, to use this tag, pass HTML in the url parse_mode field.
 # I use a pair of tags for each section of the message, so that i can
 # only copy that section, when clicked, and not the whole message.
-TAGO="<pre>"
-TAGC="</pre>"
+TAGO="<code>"
+TAGC="</code>"
 
 # Date and uptime
 DATE=${TAGO}$(date +"%d/%m/%Y - %H:%M:%S")"%0A"${TAGC}
@@ -76,12 +76,22 @@ if [ ${ENABLE_VALIDATOR_INFO} = "yes" ]; then
   VERSION_CMD=" version"
   TENDERMINT_RPC_NODE="<rpc node address>"
   VALOPER_ADDR="<valoper address>"
-  CONSENSUS_PUBKEY=$(${CLI_BIN}${STAKING_VALIDATOR_CMD}${VALOPER_ADDR} 2>/dev/null | awk '/(^|\s)key/' | sed -e 's/^\s\+\?"\?\(.\+\)"\?:\s"\?\(.\+\)"\?,\?/\2/')
+  STAKING_VALIDATOR_INFO="$(${CLI_BIN}${STAKING_VALIDATOR_CMD}${VALOPER_ADDR})"
+  CONSENSUS_PUBKEY="$(echo "${STAKING_VALIDATOR_INFO}" 2>/dev/null | awk '/(^|\s)key/' | sed -e 's/^\s\+\?"\?\(.\+\)"\?:\s"\?\(.\+\)"\?,\?/\2/')"
   CONSENSUS_PUBKEY_PARAM="{\"@type\":\"/cosmos.crypto.ed25519.PubKey\",\"key\":\"${CONSENSUS_PUBKEY}\"}"
-  SLASHING_SIGNING_INFO=$(${CLI_BIN}${SLASHING_SIGNING_CMD}${CONSENSUS_PUBKEY_PARAM} 2>/dev/null | awk '/jailed_until/{gsub(/_/," ",$1);jail=$0}/tombstoned/{gsub(/_/," ",$1);tomb=$0}/missed_blocks_counter/{gsub(/_/," ",$1);miss=$0}END{print jail"\n"tomb"\n"miss}' | sed -e 's/^\s\+\?"\?\(.\+\)"\?:\s"\(.\+\)",\?/\1: \2/' | sed -e 's/^\s\+\?//')
-  STAKING_VALIDATOR_INFO=$(${CLI_BIN}${STAKING_VALIDATOR_CMD}${VALOPER_ADDR} 2>/dev/null | awk '/moniker/{gsub(/_/," ",$1);mon=$0}/operator_address/{gsub(/_/," ",$1);op_addr=$0}END{print mon"\n"op_addr}' | sed -e 's/^\s\+\?"\?\(.\+\)"\?:\s"\(.\+\)",\?/\1: \2/' | sed -e 's/^\s\+\?//')
-  TOKENS=$(${CLI_BIN}${STAKING_VALIDATOR_CMD}${VALOPER_ADDR} 2>/dev/null | awk '/tokens/{gsub(/_/," ",$1);tokens=$2}END{print tokens}' | sed -e 's/^\s\+\?"\(.\+\)",\?/\1/')
-  if [ $(echo "${TOKENS} < ${UNIT}" | bc) -gt "0" ]; then
+  SLASHING_SIGNING_INFO="$(${CLI_BIN}${SLASHING_SIGNING_CMD}${CONSENSUS_PUBKEY_PARAM})"
+  JAILED="$(echo "${STAKING_VALIDATOR_INFO}" 2>/dev/null | awk '/(^|\s)jailed/' | sed -e 's/^\s\+\?"\?\(.\+\)"\?:\s"\?\(.\+\)"\?,\?/\2/')"
+  MISSED_BLOCKS_COUNTER="$(echo "${SLASHING_SIGNING_INFO}" 2>/dev/null | awk '/missed_blocks_counter/{gsub(/_/," ",$1);miss=$0}END{print miss}' | sed -e 's/^\s\+\?"\?\(.\+\)"\?:\s"\(.\+\)",\?/\1: \2/' | sed -e 's/^\s\+\?//')"
+  JAILED_UNTIL="$(echo "${SLASHING_SIGNING_INFO}" 2>/dev/null | awk '/jailed_until/{gsub(/_/," ",$1);jail=$0}END{print jail}' | sed -e 's/^\s\+\?"\?\(.\+\)"\?:\s"\(.\+\)",\?/\1: \2/' | sed -e 's/^\s\+\?//')"
+  TOMBSTONED="$(echo "${SLASHING_SIGNING_INFO}" 2>/dev/null | awk '/tombstoned/{gsub(/_/," ",$1);tomb=$0}END{print tomb}' | sed -e 's/^\s\+\?"\?\(.\+\)"\?:\s"\(.\+\)",\?/\1: \2/' | sed -e 's/^\s\+\?//')"
+  MONIKER_ADDRESS="$(echo "${STAKING_VALIDATOR_INFO}" 2>/dev/null | awk '/moniker/{gsub(/_/," ",$1);mon=$0}/operator_address/{gsub(/_/," ",$1);op_addr=$0}END{print mon"\n"op_addr}' | sed -e 's/^\s\+\?"\?\(.\+\)"\?:\s"\(.\+\)",\?/\1: \2/' | sed -e 's/^\s\+\?//')"
+  TOKENS="$(echo "${STAKING_VALIDATOR_INFO}" 2>/dev/null | awk '/tokens/{gsub(/_/," ",$1);tokens=$2}END{print tokens}' | sed -e 's/^\s\+\?"\(.\+\)",\?/\1/')"
+  if [ "${JAILED}" = "true" ]; then
+    JAILED="${JAILED_UNTIL}"
+  else
+    JAILED="jailed: ${JAILED}"
+  fi
+  if [ $(echo "${TOKENS} < ${UNIT}" | bc) -gt 0 ]; then
     TOKENS="0"
   fi
   TOKENS_INFO="tokens: $(echo ${TOKENS} | sed -e 's/\(.*[0-9]\)\([0-9]\{18\}\)/\1/')"
@@ -92,7 +102,7 @@ if [ ${ENABLE_VALIDATOR_INFO} = "yes" ]; then
   # frequent use could take up considerable space in the long run.
   # *** Not needed with the stargate version upgrade because fetchcli was included in the fetchd executable. ***
   # rm -rf ${USER_BASE_PATH}"/."${CLI_BIN}"/"
-  VALIDATOR_INFO="${TAGO}%0AVALIDATOR:%0A${NODE_VERSION}%0A${STAKING_VALIDATOR_INFO}%0A${TOKENS_INFO}%0Anetwork: ${VALIDATOR_NETWORK}%0A${SLASHING_SIGNING_INFO}${TAGC}"
+  VALIDATOR_INFO="${TAGO}%0AVALIDATOR:%0A${NODE_VERSION}%0A${MONIKER_ADDRESS}%0Anetwork: ${VALIDATOR_NETWORK}%0A${TOKENS_INFO}%0A${TOMBSTONED}%0A${JAILED}%0A${MISSED_BLOCKS_COUNTER}${TAGC}"
 else
   VALIDATOR_INFO=""
 fi
