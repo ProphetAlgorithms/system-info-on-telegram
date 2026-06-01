@@ -112,36 +112,42 @@ if [ ${ENABLE_VALIDATOR_INFO} = "yes" ]; then
   TENDERMINT_RPC_NODE="http://127.0.0.1:26657"
   VALOPER_ADDR="<valoper address>"
   ACCOUNT_ADDR="<account address>"
+  NODE_STATUS=$(curl ${TENDERMINT_RPC_NODE}/status? 2>/dev/null)
   STAKING_VALIDATOR_INFO="$(${CLI_BIN}${STAKING_VALIDATOR_CMD}${VALOPER_ADDR}${NODE_FLAG})"
-  CONSENSUS_PUBKEY="$(echo "${STAKING_VALIDATOR_INFO}" 2>/dev/null | awk '/(^|\s)key/' | sed -e 's/^\s\+\?"\?\(.\+\)"\?:\s"\?\(.\+\)"\?,\?/\2/')"
+  #CONSENSUS_PUBKEY="$(echo "${STAKING_VALIDATOR_INFO}" 2>/dev/null | awk '/(^|\s)value:\s/' | sed -e 's/^\s\+\?"\?\(.\+\)"\?:\s"\?\(.\+\)"\?,\?/\2/')"
+  CONSENSUS_PUBKEY="$(echo "${NODE_STATUS}" | sed -e 's/.*"pub_key":{"type":"tendermint\/PubKeyEd25519","value":"\([^}]*\)"}.*$/\1/')"
   CONSENSUS_PUBKEY_PARAM="{\"@type\":\"/cosmos.crypto.ed25519.PubKey\",\"key\":\"${CONSENSUS_PUBKEY}\"}"
   SLASHING_SIGNING_INFO="$(${CLI_BIN}${SLASHING_SIGNING_CMD}${CONSENSUS_PUBKEY_PARAM}${NODE_FLAG})"
-  COMMISSION_INFO="$(echo $(${CLI_BIN}${COMMISSION_CMD}${VALOPER_ADDR}${NODE_FLAG}) | sed -e 's/\^\?[commission:]\+\?\s\-\samount:\s"\([^"]\+\)"\s\denom\:\s\([a-zA-Z0-9]\+\)/\2: \1\n/g' | sed -e '/^$/d')"
+  # Commission output in one line
+  COMMISSION_INFO="$(echo $(${CLI_BIN}${COMMISSION_CMD}${VALOPER_ADDR}${NODE_FLAG}) | sed -e 's/\^\?\(\(commission:\s\)\+\?\)\?\s\?\-\s\([0-9]\+\.\?[0-9]\+\?\)\([a-zA-Z]\+\)\?/\3\4\n/g')"
+  #COMMISSION_INFO="$(echo $(${CLI_BIN}${COMMISSION_CMD}${VALOPER_ADDR}${NODE_FLAG}) | sed -e 's/\^\?[commission:]\+\?\s\-\samount:\s"\([^"]\+\)"\s\denom\:\s\([a-zA-Z0-9]\+\)/\2: \1\n/g' | sed -e '/^$/d')"
   BALANCES_INFO="$(echo $(${CLI_BIN}${BALANCES_CMD}${ACCOUNT_ADDR}${NODE_FLAG}) | sed -e 's/\^\?[balances:]\+\?\s\-\samount:\s"\([^"]\+\)"\s\denom\:\s\([a-zA-Z0-9]\+\)/\2: \1\n/g' | sed -e '/^$/d')"
-  JAILED="$(echo "${STAKING_VALIDATOR_INFO}" 2>/dev/null | awk '/(^|\s)jailed/' | sed -e 's/^\s\+\?"\?\(.\+\)"\?:\s"\?\(.\+\)"\?,\?/\2/')"
+  #JAILED="$(echo "${STAKING_VALIDATOR_INFO}" 2>/dev/null | awk '/(^|\s)jailed/' | sed -e 's/^\s\+\?"\?\(.\+\)"\?:\s"\?\(.\+\)"\?,\?/\2/')"
   MISSED_BLOCKS_COUNTER="$(echo "${SLASHING_SIGNING_INFO}" 2>/dev/null | awk '/missed_blocks_counter/{gsub(/_/," ",$1);miss=$0}END{print miss}' | sed -e 's/^\s\+\?"\?\(.\+\)"\?:\s"\(.\+\)",\?/\1: \2/' | sed -e 's/^\s\+\?//')"
   JAILED_UNTIL="$(echo "${SLASHING_SIGNING_INFO}" 2>/dev/null | awk '/jailed_until/{gsub(/_/," ",$1);jail=$0}END{print jail}' | sed -e 's/^\s\+\?"\?\(.\+\)"\?:\s"\(.\+\)",\?/\1: \2/' | sed -e 's/^\s\+\?//')"
-  TOMBSTONED="$(echo "${SLASHING_SIGNING_INFO}" 2>/dev/null | awk '/tombstoned/{gsub(/_/," ",$1);tomb=$0}END{print tomb}' | sed -e 's/^\s\+\?"\?\(.\+\)"\?:\s"\(.\+\)",\?/\1: \2/' | sed -e 's/^\s\+\?//')"
+  TOMBSTONED=""
+  #TOMBSTONED="%0A$(echo "${SLASHING_SIGNING_INFO}" 2>/dev/null | awk '/tombstoned/{gsub(/_/," ",$1);tomb=$0}END{print tomb}' | sed -e 's/^\s\+\?"\?\(.\+\)"\?:\s"\(.\+\)",\?/\1: \2/' | sed -e 's/^\s\+\?//')"
   MONIKER_ADDRESS="$(echo "${STAKING_VALIDATOR_INFO}" 2>/dev/null | awk '/moniker/{gsub(/_/," ",$1);mon=$0}/operator_address/{gsub(/_/," ",$1);op_addr=$0}END{print mon"\n"op_addr}' | sed -e 's/^\s\+\?"\?\(.\+\)"\?:\s"\(.\+\)",\?/\1: \2/' | sed -e 's/^\s\+\?//')"
   TOKENS="$(echo "${STAKING_VALIDATOR_INFO}" 2>/dev/null | awk '/tokens/{gsub(/_/," ",$1);tokens=$2}END{print tokens}' | sed -e 's/^\s\+\?"\(.\+\)",\?/\1/')"
-  FET_COMMISSION=$(echo "$COMMISSION_INFO" | awk '/afet/{print $2}')
+  FET_COMMISSION=$(echo "$COMMISSION_INFO" | awk '/afet/{gsub(/afet/,"",$1);afet=$0}END{print afet}')
+  #FET_COMMISSION=$(echo "$COMMISSION_INFO" | awk '/afet/{print $2}')
   FET_BALANCE=$(echo "$BALANCES_INFO" | awk '/afet/{print $2}')
-  if [ "${JAILED}" = "true" ]; then
-    JAILED="${JAILED_UNTIL}"
-  else
-    JAILED="jailed: ${JAILED}"
-  fi
+  #if [ "${JAILED}" = "true" ]; then
+  #  JAILED="${JAILED_UNTIL}"
+  #else
+  #  JAILED="jailed: ${JAILED}"
+  #fi
   TOKENS_INFO="bonded tokens: $(echo $(printTokens 18 ${TOKENS}))"
   FET_COMMISSION_INFO="fet commission: "$(printTokens 18 ${FET_COMMISSION})
   FET_BALANCE_INFO="fet balance: "$(printTokens 18 ${FET_BALANCE})
-  NODE_STATUS=$(curl ${TENDERMINT_RPC_NODE}/status? 2>&1)
-  VALIDATOR_NETWORK=$(echo "${NODE_STATUS}" | awk '/network/' | sed -e 's/^.\+:\s"\(.\+\)",\?/\1/')
+  VALIDATOR_NETWORK=$(echo "${NODE_STATUS}" | sed -e 's/.*"network":"\([^"]*\)".*$/\1/')
+  #VALIDATOR_NETWORK=$(echo "${NODE_STATUS}" | awk '/network/' | sed -e 's/^.\+:\s"\(.\+\)",\?/\1/')
   NODE_VERSION=$(echo "node version: ${CLI_BIN} $(${CLI_BIN}${VERSION_CMD})" | sed -r 's/\+/%2B/g')
   # Remove this folder every cli call because it increases the content by 8kb per call,
   # frequent use could take up considerable space in the long run.
   # *** Not needed with the stargate version upgrade because fetchcli was included in the fetchd executable. ***
   # rm -rf ${USER_BASE_PATH}"/."${CLI_BIN}"/"
-  VALIDATOR_INFO="${TAGO}%0AVALIDATOR:%0A${NODE_VERSION}%0A${MONIKER_ADDRESS}%0Anetwork: ${VALIDATOR_NETWORK}%0A${TOKENS_INFO}%0A${FET_BALANCE_INFO}%0A${FET_COMMISSION_INFO}%0A${TOMBSTONED}%0A${JAILED}%0A${MISSED_BLOCKS_COUNTER}${TAGC}"
+  VALIDATOR_INFO="${TAGO}%0AVALIDATOR:%0A${NODE_VERSION}%0A${MONIKER_ADDRESS}%0Anetwork: ${VALIDATOR_NETWORK}%0A${TOKENS_INFO}%0A${FET_BALANCE_INFO}%0A${FET_COMMISSION_INFO}${TOMBSTONED}%0A${JAILED_UNTIL}%0A${MISSED_BLOCKS_COUNTER}${TAGC}"
 else
   VALIDATOR_INFO=""
 fi
